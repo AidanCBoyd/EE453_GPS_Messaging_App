@@ -10,6 +10,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
+import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -33,19 +34,21 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Set;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
     private GoogleMap mMap;
     private FirebaseDatabase database = FirebaseDatabase.getInstance();
     private DatabaseReference myRef = database.getReference("locations");
-    private HashMap<String, LocationData> markers = new HashMap<String, LocationData>();
+    private HashMap<String, DatabaseEntry> markers = new HashMap<String, DatabaseEntry>();
+    private LocationData currentLocation = new LocationData(53.283681, -15.063978);
+    private String message = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -61,11 +64,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Object o = dsp.getValue();
                     String key = dsp.getKey();
                     HashMap<String, Double> hm = (HashMap<String, Double>) o;
-                    LocationData locDat = new LocationData(hm.get("latitude"), hm.get("longitude"));
+                    HashMap<String, String> hm2 = (HashMap<String, String>) o;
+                    double lat_marker = hm.get("lat");
+                    double long_marker = hm.get("lng");
+                    String text_marker = hm2.get("message");
+                    LocationData locDat = new LocationData(lat_marker, long_marker);
+                    currentLocation = locDat;
+                    DatabaseEntry db = new DatabaseEntry(lat_marker, long_marker, text_marker);
                     if (!markers.containsKey(key)) {
-                        markers.put(key, locDat);
+                        markers.put(key, db);
                     }
-
                 }
             }
 
@@ -74,6 +82,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 System.out.println("The read failed: " + databaseError.getCode());
             }
         });
+    }
+
+    private void addMessageMarker() {
+
+        // Write a message to the database
+        Date now = new Date();
+        SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+        String value = dt.format(now);
+        //mMap.clear();
+        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+        mMap.addMarker(new MarkerOptions().position(newLocation).title(message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
+        float zoomLevel = 5.0f;
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel));
+        DatabaseEntry db = new DatabaseEntry(currentLocation.getLatitude(), currentLocation.getLongitude(), message);
+        myRef.child(value).setValue(db);
+
     }
 
 
@@ -93,31 +117,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         LatLng engBuilding = new LatLng(53.283681, -9.063978);
-        mMap.addMarker(new MarkerOptions().position(engBuilding).title("Engineering Building NUIG").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
-        float zoomLevel = 17.0f;
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(engBuilding,zoomLevel));
+        //mMap.addMarker(new MarkerOptions().position(engBuilding).title("Engineering Building NUIG").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
+        float zoomLevel = 5.0f;
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(engBuilding, zoomLevel));
+
+        Intent intent = getIntent();
+        message = intent.getStringExtra("MESSAGE");
+
+        //Get current location
+
+        if (message != null && !message.isEmpty()) {
+            addMessageMarker();
+        } else {
+            Date now = new Date();
+            SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+            String value = dt.format(now);
+            message = value;
+        }
     }
 
     @Override
     public void onLocationChanged(Location location) {
         mMap.clear();
-        for(String key : markers.keySet()) {
-            LocationData loc = markers.get(key);
+        for (String key : markers.keySet()) {
+            DatabaseEntry dbe = markers.get(key);
+            LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
             LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
-            mMap.addMarker(new MarkerOptions().position(oldLocation).title(key).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
         }
 
         // Write a message to the database
-        LocationData locationDatabase = new LocationData(Math.round(location.getLatitude() * 1000000.0)/1000000.0, Math.round(location.getLongitude() * 1000000.0)/1000000.0);
-        Date now = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
-        String value = dt.format(now);
+        LocationData locationDatabase = new LocationData(Math.round(location.getLatitude() * 1000000.0) / 1000000.0, Math.round(location.getLongitude() * 1000000.0) / 1000000.0);
+        currentLocation = locationDatabase;
         //mMap.clear();
         LatLng newLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(newLocation).title(value).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
+        //mMap.addMarker(new MarkerOptions().position(newLocation).title(message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation,zoomLevel));
-        //myRef.child(value).setValue(locationDatabase);
+//        //myRef.child(value).setValue(locationDatabase);
     }
 
     @Override
@@ -195,8 +232,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
 
             }
-        }
-        else{
+        } else {
             Toast.makeText(this, "Can't get location", Toast.LENGTH_SHORT).show();
         }
     }
@@ -212,6 +248,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         return result;
     }
+
     private boolean hasPermission(String permission) {
         if (canAskPermission()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -220,6 +257,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         return true;
     }
+
     private boolean canAskPermission() {
         return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
     }

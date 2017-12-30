@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">EE453_GPS_Messaging_App</string>
+    <string name="app_name">GPS Chat</string>
     <string name="title_activity_maps">Map</string>
 </resources>
