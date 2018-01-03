@@ -22,4 +22,8 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, SendMessageActivity.class);
         startActivity(intent);
     }
+    public void viewMessages (View view) {
+        Intent intent = new Intent(this, ReadMessagesActivity.class);
+       startActivity(intent);
+    }
 }

@@ -31,7 +31,7 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
+            android:label="@string/title_activity_maps" />
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,7 +39,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SendMessageActivity"></activity>
+        <activity android:name=".SendMessageActivity" />
+        <activity
+            android:name=".ReadMessagesActivity"
+            android:label="@string/title_activity_read_messages"
+            android:theme="@style/AppTheme.NoActionBar" />
     </application>
 
 </manifest>
