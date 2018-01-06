@@ -15,10 +15,10 @@ public class SendMessageActivity extends AppCompatActivity {
     }
 
     public void sentHandler(View view) {
-        Intent intent = new Intent(this, MapsActivity.class);
-        EditText editText = (EditText) findViewById(R.id.message_box);
-        String message = editText.getText().toString();
-        intent.putExtra("MESSAGE", message);
+        Intent intent = new Intent(this, MapsActivity.class); //intent object for navigation to maps page
+        EditText editText = (EditText) findViewById(R.id.message_box); //edit text object allows user to input text into application
+        String message = editText.getText().toString(); 
+        intent.putExtra("MESSAGE", message); //intent object takes message as argument, as extra content within the object 
         startActivity(intent);
     }
 }

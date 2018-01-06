@@ -29,7 +29,7 @@ public class ReadMessagesActivity extends AppCompatActivity {
     private DatabaseReference myRef = database.getReference("locations");
     private ListView list;
     private ArrayAdapter<String> stringArrayAdapter;
-    private ArrayList<String> messages= new ArrayList<String>();
+    private ArrayList<String> messages= new ArrayList<String>(); // list 
 
     public ReadMessagesActivity() {
     }
@@ -41,36 +41,34 @@ public class ReadMessagesActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar4);
        setSupportActionBar(toolbar);
         getSupportActionBar().setTitle("All Messages");
-      //  ArrayList<TextView> textViews = new ArrayList<TextView>();
-        // final TextView textView = (TextView)findViewById(R.id.textView7);
-       list = (ListView) findViewById(R.id.listView);
+       list = (ListView) findViewById(R.id.listView); //listview object
 
 
         Query query = myRef.orderByKey();
-        myRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        myRef.addListenerForSingleValueEvent(new ValueEventListener() { //single value event listener
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 String viewText = "";
 
 
-                for (DataSnapshot dsp : dataSnapshot.getChildren()) {
+                for (DataSnapshot dsp : dataSnapshot.getChildren()) { //runs through entries on database
                     Object o = dsp.getValue();
                     String key = dsp.getKey();
-                    viewText += "Sent: "+key + " ";
+                    viewText += "Sent: "+key + " "; //adds date and time of sending to message
                     HashMap<String, Double> hm = (HashMap<String, Double>) o;
                     HashMap<String, String> hm2 = (HashMap<String, String>) o;
                     double lat = hm.get("lat");
-                    viewText += "\nLatitude:"+lat + ", ";
+                    viewText += "\nLatitude:"+lat + ", "; //adds latitude to message string
                     double lng = hm.get("lng");
-                    viewText += "Longitude:"+lng + "\n";
-                    String text = hm2.get("message");
-                    viewText += "Message: "+text + "\n\n";
-                    messages.add(viewText);
+                    viewText += "Longitude:"+lng + "\n"; //adding longitude
+                    String text = hm2.get("message"); 
+                    viewText += "Message: "+text + "\n\n"; //adds message
+                    messages.add(viewText); //added to arraylist
                     viewText = "";
 
                 }
 
-
+				//array adapter uses messages list for listview - every entry is new item in list
                 stringArrayAdapter =new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1,messages){
                     @Override
                     public View getView(int position, View convertView, ViewGroup parent){
@@ -87,7 +85,7 @@ public class ReadMessagesActivity extends AppCompatActivity {
                         return view;
                     }
                 };
-                list.setAdapter(stringArrayAdapter);
+                list.setAdapter(stringArrayAdapter); //sets adapter for listview 
 
             }
 
@@ -95,14 +93,6 @@ public class ReadMessagesActivity extends AppCompatActivity {
             public void onCancelled(DatabaseError databaseError) {
 
             }
-            //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        //fab.setOnClickListener(new View.OnClickListener() {
-          //  @Override
-            //public void onClick(View view) {
-              //  Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                //        .setAction("Action", null).show();
-          //  }
-        //});
 
     });
 

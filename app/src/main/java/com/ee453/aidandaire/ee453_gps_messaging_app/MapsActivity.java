@@ -38,12 +38,12 @@ import java.util.HashMap;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
     private GoogleMap mMap;
-    private FirebaseDatabase database = FirebaseDatabase.getInstance();
-    private DatabaseReference myRef = database.getReference("locations");
+    private FirebaseDatabase database = FirebaseDatabase.getInstance(); //calls firebase server
+    private DatabaseReference myRef = database.getReference("locations"); //refers to 'locations'table within database
     private HashMap<String, DatabaseEntry> markers = new HashMap<String, DatabaseEntry>();
-    private LocationData currentLocation = new LocationData(53.283681, -30.063978);
-    private String message = null;
-    private boolean notEntered = true;
+    private LocationData currentLocation = new LocationData(53.283681, -30.063978); //initalize current locationdata object
+    private String message = null; 
+    private boolean notEntered = true; //used to stop repeating entries 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +54,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        this.startGettingLocations();
+        this.startGettingLocations(); 
 
 
 
@@ -63,26 +63,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ValueEventListener valueEventListener = myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                //collectLocations();
-                for (DataSnapshot dsp : dataSnapshot.getChildren()) {
-                    Object o = dsp.getValue();
-                    String key = dsp.getKey();
-                    HashMap<String, Double> hm = (HashMap<String, Double>) o;
-                    HashMap<String, String> hm2 = (HashMap<String, String>) o;
+                for (DataSnapshot dsp : dataSnapshot.getChildren()) { //retrieves each entry from database table reference
+                    Object o = dsp.getValue(); //gets values from entry
+                    String key = dsp.getKey(); //gets key from entry - in this case, date and time of entry
+                    HashMap<String, Double> hm = (HashMap<String, Double>) o; //for lat and lng
+                    HashMap<String, String> hm2 = (HashMap<String, String>) o; //for messages 
                     double lat_marker = hm.get("lat");
                     double long_marker = hm.get("lng");
                     String text_marker = hm2.get("message");
 
                     DatabaseEntry db = new DatabaseEntry(lat_marker, long_marker, text_marker);
                     if (!markers.containsKey(key)) {
-                        markers.put(key, db);
+                        markers.put(key, db); //adds key and database entry object to markers hashmap
                     }
                 }
-                if (notEntered) {
+                if (notEntered) { //if just opened page
                     if (message != null && !message.isEmpty()) {
-                        addMessageMarker();
+                        addMessageMarker(); //adds new purple marker (when uploading new message)
                     } else {
-                        addDatabaseMarkers();
+                        addDatabaseMarkers(); //adds only orange markers (for just viewing page)
                     }
                 }
             }
@@ -95,50 +94,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    private void addDatabaseMarkers() {
+    private void addDatabaseMarkers() { //adds all coordinates and correspoding messages from database to map as orange markers
         mMap.clear();
         for (String key : markers.keySet()) {
             DatabaseEntry dbe = markers.get(key);
             LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
             LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
-            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))); //creating new marker object for google map
         }
-        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()); //used for camera
         float zoomLevel = 5.0f;
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel));
-        notEntered = false;
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel)); //moves center of map (camera position) to current location
+        notEntered = false; 
     }
 
-    private void addMessageMarker() {
+    private void addMessageMarker() { //for uploading new entries
 
         // Write a message to the database
         Date now = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
         String value = dt.format(now);
-        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()); //converts current location to LatLng
         String prev_message = "";
         String marker_message = message;
         mMap.clear();
-        for (String key : markers.keySet()) {
+        for (String key : markers.keySet()) { //iterates through each value in markers
 
             DatabaseEntry dbe = markers.get(key);
             LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
             LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
-            if(CalculationByDistance(newLocation,oldLocation) > 10) {
-                mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+            if(CalculationByDistance(newLocation,oldLocation) > 10) { //checks if current location is more than 10 metres from each marker
+                mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))); //if this is case, orange marker created
             } else {
                 prev_message = dbe.getMessage();
-                myRef.child(key).setValue(null);
+                myRef.child(key).setValue(null); //deletes old entry
             }
         }
         if (!prev_message.equals("")) {
-            marker_message = prev_message + ", " + message;
+            marker_message = prev_message + ", " + message; //appends old message to previous message
         }
-        mMap.addMarker(new MarkerOptions().position(newLocation).title(marker_message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
+        mMap.addMarker(new MarkerOptions().position(newLocation).title(marker_message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET))); //adds current location marker as purple
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel));
         DatabaseEntry db = new DatabaseEntry(currentLocation.getLatitude(), currentLocation.getLongitude(), marker_message);
-        myRef.child(value).setValue(db);
+        myRef.child(value).setValue(db); //adds new entry to database
         message = null;
         notEntered = false;
     }
@@ -160,35 +159,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker on Eng Building and move the camera
         LatLng engBuilding = new LatLng(53.283681, -9.063978);
-        //mMap.addMarker(new MarkerOptions().position(engBuilding).title("Engineering Building NUIG").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(engBuilding, zoomLevel));
 
 
         Intent intent = getIntent();
-        message = intent.getStringExtra("MESSAGE");
+        message = intent.getStringExtra("MESSAGE"); //retrieves message from intent object
 
     }
 
     @Override
-    public void onLocationChanged(Location location) {
+    public void onLocationChanged(Location location) { //method called when user location changed
         mMap.clear();
         for (String key : markers.keySet()) {
             DatabaseEntry dbe = markers.get(key);
             LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
             LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
-            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))); //adds oranges markers from previous entries as before
         }
 
         // Write a message to the database
-        LocationData locationDatabase = new LocationData(Math.round(location.getLatitude() * 1000000.0) / 1000000.0, Math.round(location.getLongitude() * 1000000.0) / 1000000.0);
+        LocationData locationDatabase = new LocationData(Math.round(location.getLatitude() * 1000000.0) / 1000000.0, Math.round(location.getLongitude() * 1000000.0) / 1000000.0); //rounds coordinates to 6 decimal places
         currentLocation = locationDatabase;
-        //mMap.clear();
         LatLng newLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        //mMap.addMarker(new MarkerOptions().position(newLocation).title(message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation,zoomLevel));
-//        //myRef.child(value).setValue(locationDatabase);
     }
 
     @Override
@@ -257,7 +252,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LocationManager.GPS_PROVIDER,
                         MIN_TIME_BW_UPDATES,
                         MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false));
+                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false)); //retrieving current location from gps
                 currentLocation = new LocationData(Math.round(loc.getLatitude() * 1000000.0) / 1000000.0, Math.round(loc.getLongitude() * 1000000.0) / 1000000.0);
             } else if (isNetwork) {
                 // from Network Provider
@@ -266,8 +261,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LocationManager.NETWORK_PROVIDER,
                         MIN_TIME_BW_UPDATES,
                         MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false));
-                currentLocation = new LocationData(Math.round(loc.getLatitude() * 1000000.0) / 1000000.0, Math.round(loc.getLongitude() * 1000000.0) / 1000000.0);
+                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false));//retrieving current location from gps
+                currentLocation = new LocationData(Math.round(loc.getLatitude() * 1000000.0) / 1000000.0, Math.round(loc.getLongitude() * 1000000.0) / 1000000.0); 
             }
         } else {
             Toast.makeText(this, "Can't get location", Toast.LENGTH_SHORT).show();
@@ -319,13 +314,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         alertDialog.show();
     }
 
+	 //calculates distance in metres between two coordinates(based off implementation from stackoverflow.com)
     public double CalculationByDistance(LatLng StartP, LatLng EndP) {
         int Radius = 6371;// radius of earth in Km
         double lat1 = StartP.latitude;
         double lat2 = EndP.latitude;
         double lon1 = StartP.longitude;
         double lon2 = EndP.longitude;
-        double dLat = Math.toRadians(lat2 - lat1);
+        double dLat = Math.toRadians(lat2 - lat1); //based on trigonometry, and the relationship between latitude, longitude and earth radius
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1))

@@ -4,6 +4,8 @@ package com.ee453.aidandaire.ee453_gps_messaging_app;
  * Created by boyd on 30/12/17.
  */
 
+//class used for uploading / downloading entries from database
+//constructor contains doubles for latitude and longitude and a string for message
 class DatabaseEntry {
 
     private double lng;
