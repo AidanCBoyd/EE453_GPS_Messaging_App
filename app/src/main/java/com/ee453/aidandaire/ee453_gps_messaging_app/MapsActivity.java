@@ -6,11 +6,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
-import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -41,8 +41,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FirebaseDatabase database = FirebaseDatabase.getInstance();
     private DatabaseReference myRef = database.getReference("locations");
     private HashMap<String, DatabaseEntry> markers = new HashMap<String, DatabaseEntry>();
-    private LocationData currentLocation = new LocationData(53.283681, -15.063978);
+    private LocationData currentLocation = new LocationData(53.283681, -30.063978);
     private String message = null;
+    private boolean notEntered = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +55,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         this.startGettingLocations();
+
+
+
         // Read from the database
         // Attach a listener to read the data at our posts reference
         ValueEventListener valueEventListener = myRef.addValueEventListener(new ValueEventListener() {
@@ -68,11 +72,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     double lat_marker = hm.get("lat");
                     double long_marker = hm.get("lng");
                     String text_marker = hm2.get("message");
-                    LocationData locDat = new LocationData(lat_marker, long_marker);
-                    currentLocation = locDat;
+
                     DatabaseEntry db = new DatabaseEntry(lat_marker, long_marker, text_marker);
                     if (!markers.containsKey(key)) {
                         markers.put(key, db);
+                    }
+                }
+                if (notEntered) {
+                    if (message != null && !message.isEmpty()) {
+                        addMessageMarker();
+                    } else {
+                        addDatabaseMarkers();
                     }
                 }
             }
@@ -82,6 +92,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 System.out.println("The read failed: " + databaseError.getCode());
             }
         });
+
+    }
+
+    private void addDatabaseMarkers() {
+        mMap.clear();
+        for (String key : markers.keySet()) {
+            DatabaseEntry dbe = markers.get(key);
+            LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
+            LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
+            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+        }
+        LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+        float zoomLevel = 5.0f;
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel));
+        notEntered = false;
     }
 
     private void addMessageMarker() {
@@ -90,14 +115,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Date now = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
         String value = dt.format(now);
-        //mMap.clear();
         LatLng newLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(newLocation).title(message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
+        String prev_message = "";
+        String marker_message = message;
+        mMap.clear();
+        for (String key : markers.keySet()) {
+
+            DatabaseEntry dbe = markers.get(key);
+            LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
+            LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
+            if(CalculationByDistance(newLocation,oldLocation) > 10) {
+                mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+            } else {
+                prev_message = dbe.getMessage();
+                myRef.child(key).setValue(null);
+            }
+        }
+        if (!prev_message.equals("")) {
+            marker_message = prev_message + ", " + message;
+        }
+        mMap.addMarker(new MarkerOptions().position(newLocation).title(marker_message).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)));
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, zoomLevel));
-        DatabaseEntry db = new DatabaseEntry(currentLocation.getLatitude(), currentLocation.getLongitude(), message);
+        DatabaseEntry db = new DatabaseEntry(currentLocation.getLatitude(), currentLocation.getLongitude(), marker_message);
         myRef.child(value).setValue(db);
-
+        message = null;
+        notEntered = false;
     }
 
 
@@ -115,25 +158,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
 
-        // Add a marker in Sydney and move the camera
+        // Add a marker on Eng Building and move the camera
         LatLng engBuilding = new LatLng(53.283681, -9.063978);
         //mMap.addMarker(new MarkerOptions().position(engBuilding).title("Engineering Building NUIG").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
         float zoomLevel = 5.0f;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(engBuilding, zoomLevel));
 
+
         Intent intent = getIntent();
         message = intent.getStringExtra("MESSAGE");
 
-        //Get current location
-
-        if (message != null && !message.isEmpty()) {
-            addMessageMarker();
-        } else {
-            Date now = new Date();
-            SimpleDateFormat dt = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
-            String value = dt.format(now);
-            message = value;
-        }
     }
 
     @Override
@@ -215,6 +249,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
 
+
         //Starts requesting location updates
         if (canGetLocation) {
             if (isGPS) {
@@ -222,7 +257,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LocationManager.GPS_PROVIDER,
                         MIN_TIME_BW_UPDATES,
                         MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-
+                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false));
+                currentLocation = new LocationData(Math.round(loc.getLatitude() * 1000000.0) / 1000000.0, Math.round(loc.getLongitude() * 1000000.0) / 1000000.0);
             } else if (isNetwork) {
                 // from Network Provider
 
@@ -230,7 +266,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LocationManager.NETWORK_PROVIDER,
                         MIN_TIME_BW_UPDATES,
                         MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-
+                Location loc = lm.getLastKnownLocation(lm.getBestProvider(new Criteria(), false));
+                currentLocation = new LocationData(Math.round(loc.getLatitude() * 1000000.0) / 1000000.0, Math.round(loc.getLongitude() * 1000000.0) / 1000000.0);
             }
         } else {
             Toast.makeText(this, "Can't get location", Toast.LENGTH_SHORT).show();
@@ -280,5 +317,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         alertDialog.show();
+    }
+
+    public double CalculationByDistance(LatLng StartP, LatLng EndP) {
+        int Radius = 6371;// radius of earth in Km
+        double lat1 = StartP.latitude;
+        double lat2 = EndP.latitude;
+        double lon1 = StartP.longitude;
+        double lon2 = EndP.longitude;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2)) * Math.sin(dLon / 2)
+                * Math.sin(dLon / 2);
+        double c = 2 * Math.asin(Math.sqrt(a));
+        double valueResult = Radius * c;
+        double meter = valueResult % 1000;
+
+        return meter;
     }
 }
