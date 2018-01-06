@@ -40,7 +40,7 @@ public class ReadMessagesActivity extends AppCompatActivity {
         setContentView(R.layout.activity_read_messages);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar4);
        setSupportActionBar(toolbar);
-        toolbar.setTitle("Read Messages");
+        getSupportActionBar().setTitle("All Messages");
       //  ArrayList<TextView> textViews = new ArrayList<TextView>();
         // final TextView textView = (TextView)findViewById(R.id.textView7);
        list = (ListView) findViewById(R.id.listView);
