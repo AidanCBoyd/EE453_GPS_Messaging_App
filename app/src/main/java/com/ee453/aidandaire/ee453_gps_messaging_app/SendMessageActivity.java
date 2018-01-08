@@ -21,4 +21,9 @@ public class SendMessageActivity extends AppCompatActivity {
         intent.putExtra("MESSAGE", message); //intent object takes message as argument, as extra content within the object 
         startActivity(intent);
     }
+
+    // End task
+    public void back(View view) {
+        finish();
+    }
 }

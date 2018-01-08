@@ -170,15 +170,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) { //method called when user location changed
-        mMap.clear();
-        for (String key : markers.keySet()) {
-            DatabaseEntry dbe = markers.get(key);
-            LocationData loc = new LocationData(dbe.getLat(),dbe.getLng());
-            LatLng oldLocation = new LatLng(loc.getLatitude(), loc.getLongitude());
-            mMap.addMarker(new MarkerOptions().position(oldLocation).title(dbe.getMessage()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))); //adds oranges markers from previous entries as before
-        }
 
-        // Write a message to the database
+        // Updates location
         LocationData locationDatabase = new LocationData(Math.round(location.getLatitude() * 1000000.0) / 1000000.0, Math.round(location.getLongitude() * 1000000.0) / 1000000.0); //rounds coordinates to 6 decimal places
         currentLocation = locationDatabase;
         LatLng newLocation = new LatLng(location.getLatitude(), location.getLongitude());
@@ -329,7 +322,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 * Math.sin(dLon / 2);
         double c = 2 * Math.asin(Math.sqrt(a));
         double valueResult = Radius * c;
-        double meter = valueResult % 1000;
+        double meter = valueResult * 1000;
 
         return meter;
     }
